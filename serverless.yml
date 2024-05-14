@@ -1,0 +1,35 @@
+service: laravel-bref-sns-consumer-example
+
+provider:
+    name: aws
+    region: us-east-1
+    stage: 'sandbox'
+    environment:
+        APP_ENV: ${sls:stage}
+        APP_KEY: ${ssm:/sandbox/laravel-bref-sns-consumer-example/app-key}
+
+package:
+    patterns:
+        - '!node_modules/**'
+        - '!public/storage'
+        - '!resources/assets/**'
+        - '!storage/**'
+        - '!tests/**'
+        - '!.env'
+
+custom:
+  snsTopic: laravel-bref-sns-dispatcher-example-${self:provider.stage}-sns-events
+
+functions:
+    sns-consumer:
+        handler: App\Handlers\MySnsHandler
+        runtime: php-82
+        timeout: 28
+        events:
+          - sns:
+              arn: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.snsTopic}" ] ]  }
+              topicName: ${self:custom.snsTopic}
+
+plugins:
+    # We need to include the Bref plugin
+    - ./vendor/bref/bref
